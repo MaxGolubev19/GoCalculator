@@ -1,9 +1,4 @@
-package rpn
-
-import (
-	"fmt"
-	"strings"
-)
+package calc
 
 func get(expression *string, index int, length int) (float64, int, error) {
 	var a float64
@@ -14,7 +9,7 @@ func get(expression *string, index int, length int) (float64, int, error) {
 			if isNumber && !isOpen {
 				return a, index, nil
 			} else {
-				return 0, 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+				return 0, 0, ErrorIncorrectExpression
 			}
 		} else if (*expression)[index] == ' ' {
 			isEndNumber = true
@@ -24,7 +19,7 @@ func get(expression *string, index int, length int) (float64, int, error) {
 				isOpen = true
 				index++
 			} else {
-				return 0, 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+				return 0, 0, ErrorIncorrectExpression
 			}
 		} else if (*expression)[index] == ')' {
 			if isOpen {
@@ -69,7 +64,7 @@ func get(expression *string, index int, length int) (float64, int, error) {
 				a *= b
 				index = new_index
 			} else {
-				return 0, 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+				return 0, 0, ErrorIncorrectExpression
 			}
 		} else if (*expression)[index] == '/' {
 			if isNumber {
@@ -77,14 +72,14 @@ func get(expression *string, index int, length int) (float64, int, error) {
 				if err != nil {
 					return 0, 0, err
 				} else if b == 0 {
-					return 0, 0, fmt.Errorf("division by zero at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+					return 0, 0, ErrorDivisionByZero
 				}
 				a /= b
 				index = new_index
 			}
 		} else if (*expression)[index]-'0' < 10 {
 			if isNumber && isEndNumber {
-				return 0, 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+				return 0, 0, ErrorIncorrectExpression
 			} else {
 				a = a*10 + float64((*expression)[index]-'0')
 				if !isNumber {
@@ -98,7 +93,7 @@ func get(expression *string, index int, length int) (float64, int, error) {
 				index++
 			}
 		} else {
-			return 0, 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, *expression, strings.Repeat(" ", index))
+			return 0, 0, ErrorIncorrectExpression
 		}
 	}
 }
@@ -127,7 +122,7 @@ func Calc(expression string) (float64, error) {
 			}
 			a -= b
 		} else {
-			return 0, fmt.Errorf("incorrect expression at index %d:\n+ %s\n+ %s^", index, expression, strings.Repeat(" ", index))
+			return 0, ErrorIncorrectExpression
 		}
 	}
 
