@@ -29,7 +29,7 @@ func (o *Orchestrator) ExpressonsHandler(w http.ResponseWriter, r *http.Request)
 func (o *Orchestrator) ExpressonByIdHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	idStr := r.URL.Path[len("/api/v1/expressions/"):] // Получаем строку ID из пути
+	idStr := r.URL.Path[len("/api/v1/expressions/"):]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

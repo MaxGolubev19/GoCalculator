@@ -3,7 +3,6 @@ package orchestrator
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -18,6 +17,7 @@ type Response struct {
 
 func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 
 	var request schemas.CalculateRequest
 	defer r.Body.Close()
@@ -44,11 +44,6 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 		json.NewEncoder(w).Encode(error)
 		return
 	}
-
-	for _, action := range *actions {
-		fmt.Println(action)
-	}
-	fmt.Println()
 
 	id := o.AddExpression(actions)
 

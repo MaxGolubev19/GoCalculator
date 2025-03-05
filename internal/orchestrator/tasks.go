@@ -34,7 +34,7 @@ func (o *Orchestrator) TaskHandler(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			log.Println(err)
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			error := schemas.ErrorResponse{Error: err.Error()}
 			json.NewEncoder(w).Encode(error)
 			return
