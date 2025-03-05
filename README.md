@@ -28,16 +28,30 @@
 - **`internal/orchestrator/`** — внутренняя логика оркестратора (управление выражениями, задачами, вычислениями).
 - **`internal/agent/`** — внутренняя логика агента (получение задач, вычисления, отправка результатов).
 - **`pkg/`** — вспомогательные библиотеки и модули.
-- **`.env`** — переменные окружения.
 - **`Dockerfile`** и **`docker-compose.yml`** — файлы для контейнеризации и развертывания системы.
 
 ## Запуск проекта
 
-Проект можно запустить с помощью `Docker Compose`:
+1. Клонируй репозиторий:
+    ```sh
+    git clone https://github.com/MaxGolubev19/GoCalculator.git
+    cd GoCalculator
+    ```
 
-```sh
-docker-compose up --build
-```
+2. Создай файл `.env` в корне проекта:
+    ```
+    PORT=8080
+    COMPUTING_POWER=10
+    TIME_ADDITION_MS=100
+    TIME_SUBTRACTION_MS=200
+    TIME_MULTIPLICATIONS_MS=300
+    TIME_DIVISIONS_MS=400
+    ```
+
+3. Запусти систему с помощью Docker:
+    ```sh
+    docker-compose up --build
+    ```
 
 ## Переменные окружения
 
