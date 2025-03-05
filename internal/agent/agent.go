@@ -57,21 +57,21 @@ func worker(url string) {
 	for {
 		time.Sleep(100 * time.Millisecond)
 
-		task, err := get(url)
+		task, err := Get(url)
 		if err != nil {
 			continue
 		}
 
-		result, err := calc(task)
+		result, err := Calc(task)
 
-		err = post(url, task.Id, result, err)
+		err = Post(url, task.Id, result, err)
 		if err != nil {
 			continue
 		}
 	}
 }
 
-func get(url string) (*schemas.Task, error) {
+func Get(url string) (*schemas.Task, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func get(url string) (*schemas.Task, error) {
 	return &tr, nil
 }
 
-func calc(t *schemas.Task) (float64, error) {
+func Calc(t *schemas.Task) (float64, error) {
 	time.Sleep(time.Duration(t.OperationTime) * time.Millisecond)
 
 	switch t.Operation {
@@ -112,7 +112,7 @@ func calc(t *schemas.Task) (float64, error) {
 	}
 }
 
-func post(url string, id int, result float64, err error) error {
+func Post(url string, id int, result float64, err error) error {
 	tr := schemas.TaskRequest{
 		Id:         id,
 		Result:     result,

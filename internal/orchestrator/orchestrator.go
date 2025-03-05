@@ -127,3 +127,18 @@ func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
 	o.expressions[id].Status = schemas.DONE
 	o.expressions[id].Result = (*actions)[index-1].Value
 }
+
+// For tests
+func (o *Orchestrator) GetAction(id int) *schemas.Action {
+	if action, exists := o.actions[id]; exists {
+		return action
+	}
+	return nil
+}
+
+func (o *Orchestrator) GetExpression(id int) *schemas.Expression {
+	if id < 0 || id >= len(o.expressions) {
+		return nil
+	}
+	return &o.expressions[id]
+}
