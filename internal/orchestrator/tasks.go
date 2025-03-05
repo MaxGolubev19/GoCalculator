@@ -60,11 +60,6 @@ func (o *Orchestrator) TaskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *Orchestrator) AddTask(action *schemas.Action) int {
-	taskId := o.taskId
-	o.taskId++
-
-	o.actions[taskId] = action
-
 	var operationTime int
 	switch action.Operation {
 	case schemas.AddOperation:
@@ -77,6 +72,12 @@ func (o *Orchestrator) AddTask(action *schemas.Action) int {
 		operationTime = o.config.TimeDivisionsMS
 	}
 
+	o.muTask.Lock()
+
+	taskId := o.taskId
+	o.taskId++
+	o.actions[taskId] = action
+
 	o.tasks = append(o.tasks, schemas.Task{
 		Id:            taskId,
 		Arg1:          action.Left.Value,
@@ -84,6 +85,8 @@ func (o *Orchestrator) AddTask(action *schemas.Action) int {
 		Operation:     action.Operation,
 		OperationTime: operationTime,
 	})
+
+	o.muTask.Unlock()
 
 	return taskId
 }

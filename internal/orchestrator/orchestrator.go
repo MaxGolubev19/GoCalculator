@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/MaxGolubev19/GoCalculator/pkg/schemas"
@@ -62,10 +63,12 @@ type Orchestrator struct {
 
 	expressions  []schemas.Expression
 	expressionId int
+	muExpression sync.Mutex
 
 	actions map[int]*schemas.Action
 	tasks   []schemas.Task
 	taskId  int
+	muTask  sync.Mutex
 }
 
 func New() *Orchestrator {

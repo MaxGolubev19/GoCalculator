@@ -53,6 +53,8 @@ func (o *Orchestrator) ExpressonByIdHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (o *Orchestrator) AddExpression(actions *[]*schemas.Action) int {
+	o.muExpression.Lock()
+
 	expressionId := o.expressionId
 	o.expressionId++
 
@@ -61,7 +63,9 @@ func (o *Orchestrator) AddExpression(actions *[]*schemas.Action) int {
 		Status: schemas.IN_PROGRESS,
 	})
 
+	o.muExpression.Unlock()
+
 	go o.worker(expressionId, actions)
 
-	return o.expressionId - 1
+	return expressionId
 }
