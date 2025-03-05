@@ -45,6 +45,11 @@ func (o *Orchestrator) TaskHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if request.StatusCode != 200 {
+			o.actions[request.Id].IsError = true
+			return
+		}
+
 		o.actions[request.Id].Value = request.Result
 		o.actions[request.Id].IsCalculated = true
 

@@ -98,6 +98,11 @@ func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
 			continue
 		}
 
+		if (*actions)[index].Left.IsError || (*actions)[index].Right.IsError {
+			o.expressions[id].Status = schemas.ERROR
+			return
+		}
+
 		if (*actions)[index].Left.IsCalculated && (*actions)[index].Right.IsCalculated {
 			o.AddTask((*actions)[index])
 			index++
@@ -107,8 +112,13 @@ func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	for !(*actions)[index-1].IsCalculated {
+	for !(*actions)[index-1].IsCalculated && !(*actions)[index-1].IsError {
 		time.Sleep(100 * time.Millisecond)
+	}
+
+	if (*actions)[index-1].IsError {
+		o.expressions[id].Status = schemas.ERROR
+		return
 	}
 
 	o.expressions[id].Status = schemas.DONE

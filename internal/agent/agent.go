@@ -63,11 +63,8 @@ func worker(url string) {
 		}
 
 		result, err := calc(task)
-		if err != nil {
-			continue
-		}
 
-		err = post(url, task.Id, result)
+		err = post(url, task.Id, result, err)
 		if err != nil {
 			continue
 		}
@@ -107,18 +104,23 @@ func calc(t *schemas.Task) (float64, error) {
 		return t.Arg1 * t.Arg2, nil
 	case '/':
 		if t.Arg2 == 0 {
-			return 0, errors.New("division by zero")
+			return 0, schemas.ErrorDivisionByZero
 		}
 		return t.Arg1 / t.Arg2, nil
 	default:
-		return 0, errors.New("unknown operation")
+		return 0, schemas.ErrorDivisionByZero
 	}
 }
 
-func post(url string, id int, result float64) error {
+func post(url string, id int, result float64, err error) error {
 	tr := schemas.TaskRequest{
-		Id:     id,
-		Result: result,
+		Id:         id,
+		Result:     result,
+		StatusCode: 200,
+	}
+
+	if err != nil {
+		tr.StatusCode = 500
 	}
 
 	trJson, err := json.Marshal(tr)

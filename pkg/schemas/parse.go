@@ -15,4 +15,5 @@ type Action struct {
 	Left         *Action
 	Right        *Action
 	IsCalculated bool
+	IsError      bool
 }

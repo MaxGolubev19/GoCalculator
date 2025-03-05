@@ -31,7 +31,7 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 
 	expr := strings.TrimSpace(request.Expression)
 	actions, err := parse.New(expr)
-	if errors.Is(err, parse.ErrorIncorrectExpression) {
+	if errors.Is(err, schemas.ErrorIncorrectExpression) {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		error := schemas.ErrorResponse{Error: "Expression is not valid"}

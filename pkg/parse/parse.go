@@ -74,7 +74,7 @@ func (p *Parsing) Parse() error {
 			continue
 		}
 
-		return ErrorIncorrectExpression
+		return schemas.ErrorIncorrectExpression
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func (p *Parsing) get(index int, length int) (*schemas.Action, int, error) {
 			if a != nil && isOpen == 0 {
 				return a, index, nil
 			} else {
-				return nil, 0, ErrorIncorrectExpression
+				return nil, 0, schemas.ErrorIncorrectExpression
 			}
 		}
 
@@ -125,7 +125,7 @@ func (p *Parsing) get(index int, length int) (*schemas.Action, int, error) {
 				if a != nil {
 					return a, index, nil
 				}
-				return nil, 0, ErrorIncorrectExpression
+				return nil, 0, schemas.ErrorIncorrectExpression
 			}
 			continue
 		}
@@ -193,7 +193,7 @@ func (p *Parsing) get(index int, length int) (*schemas.Action, int, error) {
 				p.actions = append(p.actions, a)
 				index = new_index
 			} else {
-				return nil, 0, ErrorIncorrectExpression
+				return nil, 0, schemas.ErrorIncorrectExpression
 			}
 			continue
 		}
@@ -214,14 +214,14 @@ func (p *Parsing) get(index int, length int) (*schemas.Action, int, error) {
 				p.actions = append(p.actions, a)
 				index = new_index
 			} else {
-				return nil, 0, ErrorIncorrectExpression
+				return nil, 0, schemas.ErrorIncorrectExpression
 			}
 			continue
 		}
 
 		if p.expression[index]-'0' < 10 {
 			if isNumber && isEndNumber {
-				return nil, 0, ErrorIncorrectExpression
+				return nil, 0, schemas.ErrorIncorrectExpression
 			} else {
 				n = n*10 + float64((p.expression)[index]-'0')
 				if !isNumber {
@@ -237,6 +237,6 @@ func (p *Parsing) get(index int, length int) (*schemas.Action, int, error) {
 			continue
 		}
 
-		return nil, 0, ErrorIncorrectExpression
+		return nil, 0, schemas.ErrorIncorrectExpression
 	}
 }

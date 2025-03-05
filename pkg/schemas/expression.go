@@ -5,6 +5,7 @@ type Status string
 const (
 	IN_PROGRESS Status = "IN PROGRESS"
 	DONE        Status = "DONE"
+	ERROR       Status = "ERROR"
 )
 
 type ExpressionRequest struct {

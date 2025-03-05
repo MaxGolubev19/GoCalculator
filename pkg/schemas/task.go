@@ -13,6 +13,7 @@ type TaskResponse struct {
 }
 
 type TaskRequest struct {
-	Id     int     `json:"id"`
-	Result float64 `json:"result"`
+	Id         int     `json:"id"`
+	Result     float64 `json:"result"`
+	StatusCode int     `json:"status_code"`
 }
