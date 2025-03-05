@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  orchestrator:
+    build: .
+    command: go run ./cmd/orchestrator
+    env_file: .env
+    ports:
+      - "${PORT}:${PORT}"
+
+  agent:
+    build: .
+    command: go run ./cmd/agent
+    env_file: .env
+    depends_on:
+      - orchestrator
