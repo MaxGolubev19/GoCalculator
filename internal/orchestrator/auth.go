@@ -91,7 +91,14 @@ func (o *Orchestrator) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(token))
+	response := schemas.LoginResponse{Token: token}
+	data, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(data)
 }
 
 func (o *Orchestrator) GetUser(login string) (*schemas.User, error) {
