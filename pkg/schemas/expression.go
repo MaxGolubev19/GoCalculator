@@ -13,9 +13,10 @@ type ExpressionRequest struct {
 }
 
 type Expression struct {
-	Id     int     `json:"id"`
-	Status Status  `json:"status"`
-	Result float64 `json:"result"`
+	Id         int     `json:"id"`
+	Expression string  `json:"expression"`
+	Status     Status  `json:"status"`
+	Result     float64 `json:"result"`
 }
 
 type ExpressionResponse struct {

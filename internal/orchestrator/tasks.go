@@ -1,62 +1,68 @@
 package orchestrator
 
 import (
-	"encoding/json"
+	"context"
+	"fmt"
 	"log"
-	"net/http"
+	"net"
+	"os"
 
+	pb "github.com/MaxGolubev19/GoCalculator/pkg/proto"
 	"github.com/MaxGolubev19/GoCalculator/pkg/schemas"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func (o *Orchestrator) TaskHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (o *Orchestrator) RunTaskServer() {
+	addr := fmt.Sprintf("0.0.0.0:%s", o.config.GrpcPort)
+	lis, err := net.Listen("tcp", addr)
 
-	if r.Method == "GET" {
-		response := o.GetTask()
-		if response == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			error := schemas.ErrorResponse{Error: "Internal server error"}
-			json.NewEncoder(w).Encode(error)
-			return
-		}
-
-		return
+	if err != nil {
+		log.Println("error starting tcp listener: ", err)
+		os.Exit(1)
 	}
 
-	if r.Method == "POST" {
-		var request schemas.TaskRequest
-		defer r.Body.Close()
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			error := schemas.ErrorResponse{Error: err.Error()}
-			json.NewEncoder(w).Encode(error)
-			return
-		}
+	log.Println("tcp listener started at port: ", o.config.GrpcPort)
 
-		if o.taskId <= request.Id {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+	grpcServer := grpc.NewServer()
+	pb.RegisterTaskServiceServer(grpcServer, o)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Println("error serving grpc: ", err)
+		os.Exit(1)
+	}
+}
 
-		if request.StatusCode != 200 {
-			o.actions[request.Id].IsError = true
-			return
-		}
-
-		o.actions[request.Id].Value = request.Result
-		o.actions[request.Id].IsCalculated = true
-
-		return
+func (o *Orchestrator) GetTask(ctx context.Context, _ *emptypb.Empty) (*pb.TaskResponse, error) {
+	if len(o.tasks) == 0 {
+		return nil, status.Errorf(codes.NotFound, "")
 	}
 
-	w.WriteHeader(http.StatusNotFound)
+	task := &o.tasks[0]
+	o.tasks = o.tasks[1:]
+
+	return &pb.TaskResponse{
+		Task: task,
+	}, nil
+}
+
+func (o *Orchestrator) SubmitTask(ctx context.Context, request *pb.TaskRequest) (*emptypb.Empty, error) {
+	id := int(request.Id)
+
+	if o.taskId <= id {
+		return nil, status.Errorf(codes.NotFound, "")
+	}
+
+	if request.StatusCode != 200 {
+		o.actions[id].IsError = true
+		return nil, nil
+	}
+
+	o.actions[id].Value = request.Result
+	o.actions[id].IsCalculated = true
+
+	return nil, nil
 }
 
 func (o *Orchestrator) AddTask(action *schemas.Action) int {
@@ -72,31 +78,20 @@ func (o *Orchestrator) AddTask(action *schemas.Action) int {
 		operationTime = o.config.TimeDivisionsMS
 	}
 
-	o.muTask.Lock()
+	o.muTasks.Lock()
+	defer o.muTasks.Unlock()
 
 	taskId := o.taskId
 	o.taskId++
 	o.actions[taskId] = action
 
-	o.tasks = append(o.tasks, schemas.Task{
-		Id:            taskId,
+	o.tasks = append(o.tasks, pb.Task{
+		Id:            int32(taskId),
 		Arg1:          action.Left.Value,
 		Arg2:          action.Right.Value,
-		Operation:     action.Operation,
-		OperationTime: operationTime,
+		Operation:     pb.Operation(action.Operation),
+		OperationTime: int32(operationTime),
 	})
 
-	o.muTask.Unlock()
-
 	return taskId
-}
-
-func (o *Orchestrator) GetTask() *schemas.Task {
-	if len(o.tasks) == 0 {
-		return nil
-	}
-
-	task := &o.tasks[0]
-	o.tasks = o.tasks[1:]
-	return task
 }

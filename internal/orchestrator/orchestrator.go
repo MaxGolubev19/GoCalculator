@@ -1,17 +1,22 @@
 package orchestrator
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 
+	pb "github.com/MaxGolubev19/GoCalculator/pkg/proto"
 	"github.com/MaxGolubev19/GoCalculator/pkg/schemas"
 )
 
 type Config struct {
-	Port string
+	PublicPort string
+	GrpcPort   string
+
+	SecretKey string
 
 	TimeAdditionMS       int
 	TimeSubstractionMS   int
@@ -22,9 +27,19 @@ type Config struct {
 func ConfigFromEnv() *Config {
 	config := new(Config)
 
-	config.Port = os.Getenv("PORT")
-	if config.Port == "" {
-		config.Port = "8080"
+	config.PublicPort = os.Getenv("PUBLIC_PORT")
+	if config.PublicPort == "" {
+		config.PublicPort = "8080"
+	}
+
+	config.GrpcPort = os.Getenv("GRPC_PORT")
+	if config.GrpcPort == "" {
+		config.GrpcPort = "50051"
+	}
+
+	config.SecretKey = os.Getenv("SECRET_KEY")
+	if config.SecretKey == "" {
+		config.SecretKey = "super secret key"
 	}
 
 	time, err := strconv.Atoi(os.Getenv("TIME_ADDITION_MS"))
@@ -61,31 +76,50 @@ func ConfigFromEnv() *Config {
 type Orchestrator struct {
 	config *Config
 
-	expressions  []schemas.Expression
-	expressionId int
-	muExpression sync.Mutex
+	db *sql.DB
 
 	actions map[int]*schemas.Action
-	tasks   []schemas.Task
+
+	pb.TaskServiceServer
+	tasks   []pb.Task
 	taskId  int
-	muTask  sync.Mutex
+	muTasks sync.Mutex
 }
 
 func New() *Orchestrator {
 	return &Orchestrator{
-		config:      ConfigFromEnv(),
-		expressions: make([]schemas.Expression, 0),
-		actions:     make(map[int]*schemas.Action, 0),
-		tasks:       make([]schemas.Task, 0),
+		config:  ConfigFromEnv(),
+		actions: make(map[int]*schemas.Action, 0),
+		tasks:   make([]pb.Task, 0),
 	}
 }
 
 func (o *Orchestrator) Run() error {
-	http.HandleFunc("/api/v1/calculate", o.CalculateHandler)
-	http.HandleFunc("/api/v1/expressions/", o.ExpressonByIdHandler)
-	http.HandleFunc("/api/v1/expressions", o.ExpressonsHandler)
-	http.HandleFunc("/internal/task", o.TaskHandler)
-	return http.ListenAndServe(":"+o.config.Port, nil)
+	go o.RunTaskServer()
+
+	db, err := InitDB()
+	if err != nil {
+		return err
+	}
+	o.db = db
+	defer o.db.Close()
+
+	if expressions, err := o.GetExpressionsInProgress(); err != nil {
+		return err
+	} else {
+		for _, expr := range expressions {
+			o.ParseExpression(expr.Id, expr.Expression)
+		}
+	}
+
+	http.HandleFunc("/api/v1/register", o.RegisterHandler)
+	http.HandleFunc("/api/v1/login", o.LoginHandler)
+
+	http.Handle("/api/v1/calculate", o.CheckJWT(http.HandlerFunc(o.CalculateHandler)))
+	http.Handle("/api/v1/expressions/", o.CheckJWT(http.HandlerFunc(o.ExpressonByIdHandler)))
+	http.Handle("/api/v1/expressions", o.CheckJWT(http.HandlerFunc(o.ExpressonsHandler)))
+
+	return http.ListenAndServe(":"+o.config.PublicPort, nil)
 }
 
 func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
@@ -102,7 +136,7 @@ func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
 		}
 
 		if (*actions)[index].Left.IsError || (*actions)[index].Right.IsError {
-			o.expressions[id].Status = schemas.ERROR
+			o.SetExpressionError(id)
 			return
 		}
 
@@ -120,12 +154,11 @@ func (o *Orchestrator) worker(id int, actions *[]*schemas.Action) {
 	}
 
 	if (*actions)[index-1].IsError {
-		o.expressions[id].Status = schemas.ERROR
+		o.SetExpressionError(id)
 		return
 	}
 
-	o.expressions[id].Status = schemas.DONE
-	o.expressions[id].Result = (*actions)[index-1].Value
+	o.SetExpressionDone(id, (*actions)[index-1].Value)
 }
 
 // For tests
@@ -134,11 +167,4 @@ func (o *Orchestrator) GetAction(id int) *schemas.Action {
 		return action
 	}
 	return nil
-}
-
-func (o *Orchestrator) GetExpression(id int) *schemas.Expression {
-	if id < 0 || id >= len(o.expressions) {
-		return nil
-	}
-	return &o.expressions[id]
 }

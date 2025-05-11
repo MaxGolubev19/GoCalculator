@@ -1,0 +1,35 @@
+syntax = "proto3";
+package orchestrator;
+option go_package = "github.com/MaxGolubev19/GoCalculator/pkg/proto";
+
+import "google/protobuf/empty.proto";
+
+enum Operation {
+  AddOperation = 0;
+  SubOperation = 1;
+  MulOperation = 2;
+  DivOperation = 3;
+}
+
+message Task {
+  int32 id = 1;
+  double arg1 = 2;
+  double arg2 = 3;
+  Operation operation = 4;
+  int32 operation_time = 5;
+}
+
+message TaskResponse {
+  Task task = 1;
+}
+
+message TaskRequest {
+  int32 id = 1;
+  double result = 2;
+  int32 status_code = 3;
+}
+
+service TaskService {
+  rpc GetTask (google.protobuf.Empty) returns (TaskResponse);
+  rpc SubmitTask (TaskRequest) returns (google.protobuf.Empty);
+}

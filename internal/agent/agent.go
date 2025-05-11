@@ -1,15 +1,17 @@
 package agent
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"net/http"
+	"context"
+	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
 
+	pb "github.com/MaxGolubev19/GoCalculator/pkg/proto"
 	"github.com/MaxGolubev19/GoCalculator/pkg/schemas"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Config struct {
@@ -20,7 +22,7 @@ type Config struct {
 func ConfigFromEnv() *Config {
 	config := new(Config)
 
-	config.Port = os.Getenv("PORT")
+	config.Port = os.Getenv("GRPC_PORT")
 	if config.Port == "" {
 		config.Port = "8080"
 	}
@@ -46,53 +48,50 @@ func New() *Agent {
 }
 
 func (a *Agent) Run() error {
+	addr := fmt.Sprintf("%s:%s", "orchestrator", a.config.Port)
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	if err != nil {
+		log.Println("could not connect to grpc server: ", err)
+		os.Exit(1)
+	}
+
+	defer conn.Close()
+
+	grpcClient := pb.NewTaskServiceClient(conn)
+
 	for i := 0; i < a.config.ComputingPower; i++ {
-		go worker("http://orchestrator:" + a.config.Port + "/internal/task")
+		go worker(grpcClient)
 	}
 
 	select {}
 }
 
-func worker(url string) {
+func worker(client pb.TaskServiceClient) {
 	for {
 		time.Sleep(100 * time.Millisecond)
 
-		task, err := Get(url)
+		task, err := client.GetTask(context.TODO(), nil)
 		if err != nil {
 			continue
 		}
 
-		result, err := Calc(task)
+		code := 200
 
-		err = Post(url, task.Id, result, err)
+		result, err := Calc(task.Task)
 		if err != nil {
-			continue
+			code = 500
 		}
+
+		client.SubmitTask(context.TODO(), &pb.TaskRequest{
+			Id:         task.Task.Id,
+			Result:     result,
+			StatusCode: int32(code),
+		})
 	}
 }
 
-func Get(url string) (*schemas.Task, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, errors.New("404: задач нет")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("500: ошибка сервера")
-	}
-
-	var tr schemas.Task
-	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
-		return nil, err
-	}
-	return &tr, nil
-}
-
-func Calc(t *schemas.Task) (float64, error) {
+func Calc(t *pb.Task) (float64, error) {
 	time.Sleep(time.Duration(t.OperationTime) * time.Millisecond)
 
 	switch t.Operation {
@@ -110,38 +109,4 @@ func Calc(t *schemas.Task) (float64, error) {
 	default:
 		return 0, schemas.ErrorDivisionByZero
 	}
-}
-
-func Post(url string, id int, result float64, err error) error {
-	tr := schemas.TaskRequest{
-		Id:         id,
-		Result:     result,
-		StatusCode: 200,
-	}
-
-	if err != nil {
-		tr.StatusCode = 500
-	}
-
-	trJson, err := json.Marshal(tr)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(url, "application/json", bytes.NewReader(trJson))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return errors.New("404: not found")
-	}
-	if resp.StatusCode == http.StatusUnprocessableEntity {
-		return errors.New("422: inbavid data")
-	}
-	return errors.New("unknown error")
 }

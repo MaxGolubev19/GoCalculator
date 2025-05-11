@@ -6,7 +6,10 @@ services:
     command: go run ./cmd/orchestrator
     env_file: .env
     ports:
-      - "${PORT}:${PORT}"
+      - "${PUBLIC_PORT}:${PUBLIC_PORT}"
+      - "${GRPC_PORT}:${GRPC_PORT}"
+    volumes:
+      - data:/app/data
 
   agent:
     build: .
@@ -14,3 +17,6 @@ services:
     env_file: .env
     depends_on:
       - orchestrator
+
+volumes:
+  data:
