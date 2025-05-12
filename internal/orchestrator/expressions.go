@@ -186,7 +186,7 @@ func (o *Orchestrator) SetExpressionDone(id int, result float64) error {
 
 func (o *Orchestrator) GetExpressionsInProgress() ([]schemas.Expression, error) {
 	const query = `
-	SELECT id, expression, user_login, status, result
+	SELECT id, expression, status, result
 	FROM expressions
 	WHERE status = ?;
 	`
